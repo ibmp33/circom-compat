@@ -2,17 +2,16 @@ use ark_circom::{CircomBuilder, CircomConfig};
 use ark_std::rand::thread_rng;
 use color_eyre::Result;
 
-use ark_bn254::Bn254;
+use ark_bls12_381::Bls12_381;
 use ark_crypto_primitives::snark::SNARK;
 use ark_groth16::Groth16;
 
-type GrothBn = Groth16<Bn254>;
+type GrothBls = Groth16<Bls12_381>;
 
 use num_bigint::BigInt;
 use serde_json::Value;
 use std::str::FromStr;
 use std::time::Instant;
-
 fn value_to_bigint(v: &Value) -> Vec<BigInt> {
     match v {
         Value::String(inner) => vec![BigInt::from_str(inner).unwrap()],
@@ -30,12 +29,12 @@ fn value_to_bigint(v: &Value) -> Vec<BigInt> {
 #[test]
 #[cfg(feature = "circom-2")]
 fn groth16_proof() -> Result<()> {
-    let cfg = CircomConfig::<Bn254>::new(
-        "./test-vectors/fibonacci.final.wasm",
-        "./test-vectors/fibonacci.final.r1cs",
+    let cfg = CircomConfig::<Bls12_381>::new(
+        "./test-vectors/fibonacci_bls12381.final.wasm",
+        "./test-vectors/fibonacci_bls12381.final.r1cs",
     )?;
     let mut builder = CircomBuilder::new(cfg);
-    let inputs_path = "./test-vectors/final_input.zkin.json";
+    let inputs_path = "./test-vectors/final_input_bls12381.zkin.json";
     let inputs_str = std::fs::read_to_string(inputs_path).unwrap();
     let inputs: std::collections::HashMap<String, serde_json::Value> =
         serde_json::from_str(&inputs_str).unwrap();
@@ -72,9 +71,9 @@ fn groth16_proof() -> Result<()> {
 
     let start_time2 = Instant::now();
     let mut rng = thread_rng();
-    let params = GrothBn::generate_random_parameters_with_reduction(circom, &mut rng)?;
+    let params = GrothBls::generate_random_parameters_with_reduction(circom, &mut rng)?;
     let elapsed_time2 = start_time2.elapsed();
-    println!("Time taken for GrothBn::generate_random_parameters_with_reduction {:?}", elapsed_time2);
+    println!("Time taken for GrothBls::generate_random_parameters_with_reduction {:?}", elapsed_time2);
 
     let start_time3 = Instant::now();
     let circom = builder.build()?;
@@ -84,13 +83,13 @@ fn groth16_proof() -> Result<()> {
     let inputs = circom.get_public_inputs().unwrap();
 
     let start_time = Instant::now();
-    let proof = GrothBn::prove(&params, circom, &mut rng)?;
+    let proof = GrothBls::prove(&params, circom, &mut rng)?;
     let elapsed_time = start_time.elapsed();
-    println!("Time taken for GrothBn::prove: {:?}", elapsed_time);
+    println!("Time taken for GrothBls::prove: {:?}", elapsed_time);
 
-    let pvk = GrothBn::process_vk(&params.vk).unwrap();
+    let pvk = GrothBls::process_vk(&params.vk).unwrap();
 
-    let verified = GrothBn::verify_with_processed_vk(&pvk, &inputs, &proof)?;
+    let verified = GrothBls::verify_with_processed_vk(&pvk, &inputs, &proof)?;
 
     assert!(verified);
 
